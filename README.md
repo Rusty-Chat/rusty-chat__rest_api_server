@@ -1,6 +1,6 @@
 # Rusty Chat.
 
-A modular(domain-driven-development patterned) opensource REST API layer/service for the Rusty Chat project.
+A modular(domain-driven-development patterned) CORE REST API layer/service for the Krabby `chat` implementation.
 
 ## Features
 
@@ -11,7 +11,7 @@ A modular(domain-driven-development patterned) opensource REST API layer/service
 1. Clone this repository.
 
 ```shell
-git clone https://github.com/Okpainmo/rusty-chat.git
+git clone https://github.com/KrabbyHQ/chat__core_rest_api_server.git
 ```
 
 2. Install all the dependencies(and compile code-base).
@@ -93,3 +93,4 @@ To avoid any issues related to the operating system, it is recommended to use a 
 > WSL(Windows Sub-system For Linux) works just fine in case you're building from a Windows environment.
 
 Cheers!!!
+
