@@ -7,13 +7,9 @@ use axum::{
     Json,
 };
 use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tracing::error;
 
-#[derive(Debug, Deserialize)]
-pub struct DeleteMessagePayload {
-    pub sender_id: i64,
-}
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct Message {

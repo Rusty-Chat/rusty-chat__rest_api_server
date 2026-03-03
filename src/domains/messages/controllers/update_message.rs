@@ -16,21 +16,6 @@ pub struct UpdateMessagePayload {
     pub sender_id: i64
 }
 
-#[derive(sqlx::Type, Debug)]
-#[sqlx(type_name = "text")]
-pub enum MessageAction {
-    #[sqlx(rename = "original-send")]
-    OriginalSend,
-    #[sqlx(rename = "edit")]
-    Edit,
-    #[sqlx(rename = "delete")]
-    Delete,
-    #[sqlx(rename = "reaction")]
-    Reaction,
-    #[sqlx(rename = "system")]
-    System,
-}
-
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct Message {
     pub id: i64,
@@ -75,7 +60,7 @@ pub struct UpdateMessageResponse {
 
 pub async fn update_message(
     State(state): State<AppState>,
-    Extension(session): Extension<SessionsMiddlewareOutput>,
+    Extension(_session): Extension<SessionsMiddlewareOutput>,
     Path(message_id): Path<i64>,
     Json(payload): Json<UpdateMessagePayload>,
 ) -> impl IntoResponse {

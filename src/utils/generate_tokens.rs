@@ -33,7 +33,7 @@ pub struct Tokens {
 pub async fn generate_tokens(token_type: &str, user: User) -> Result<Tokens, JwtError> {
     load_env();
 
-    let jwt_secret = env::var("JWT_SECRET").unwrap();
+    let jwt_secret = env::var("APP__AUTH__JWT_SECRET").unwrap();
     let access_expiry = env::var("JWT_ACCESS_EXPIRATION_TIME").unwrap_or("1".to_string());
     let session_expiry = env::var("JWT_SESSION_EXPIRATION_TIME").unwrap_or("24".to_string());
     let otp_expiry = env::var("JWT_ONE_TIME_PASSWORD_LIFETIME").unwrap_or("5".to_string());

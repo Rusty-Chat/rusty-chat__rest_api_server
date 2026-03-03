@@ -1,10 +1,10 @@
 use crate::AppState;
 use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 use axum::{
-    Json,
-    extract::{Extension, Path, State, Query},
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
+    Json,
 };
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
@@ -73,7 +73,7 @@ pub struct PayloadSpecs {
 
 pub async fn sync_room_messages_status_to_delivered(
     State(state): State<AppState>,
-    Extension(session): Extension<SessionsMiddlewareOutput>,
+    Extension(_session): Extension<SessionsMiddlewareOutput>,
     // Query(params): Query<SearchParams>,
     Path(room_id): Path<i64>,
     Json(payload): Json<PayloadSpecs>,

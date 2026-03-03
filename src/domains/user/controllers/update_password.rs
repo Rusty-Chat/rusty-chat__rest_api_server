@@ -1,3 +1,4 @@
+use crate::domains::rooms::controllers::update_room::UpdateResponse as RoomUpdateResponse;
 use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 use crate::utils::hashing_handler::hashing_handler;
 
@@ -14,15 +15,9 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-#[derive(Debug, Deserialize)]
-pub struct UpdateUserPayload {
-    pub full_name: Option<String>,
-    pub email: Option<String>,
-    pub password: Option<String>,
-}
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct UserProfile {
+pub struct LocalUserProfile {
     id: i64,
     full_name: String,
     email: String,
@@ -42,18 +37,11 @@ pub struct UserProfile {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Debug, sqlx::FromRow)]
-struct UserLookup {
-    id: i64,
-    email: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
 
 #[derive(Debug, Serialize)]
-pub struct UpdateResponse {
+pub struct PasswordUpdateResponse {
     response_message: String,
-    response: Option<UserProfile>,
+    response: Option<LocalUserProfile>,
     error: Option<String>,
 }
 
@@ -63,13 +51,14 @@ pub struct UpdatePasswordPayload {
     pub new_password: String,
 }
 
+/// update_password is a function that updates a user's password.
 pub async fn update_password(
     State(state): State<AppState>,
     Extension(session): Extension<SessionsMiddlewareOutput>,
     Path(user_id): Path<i64>,
     Json(payload): Json<UpdatePasswordPayload>,
 ) -> impl IntoResponse {
-    let user = match sqlx::query_as::<_, UserProfile>(
+    let user_result = sqlx::query_as::<_, LocalUserProfile>(
         r#"
         SELECT id, full_name, email, profile_image, password,
                access_token, refresh_token, status, last_seen,
@@ -80,15 +69,47 @@ pub async fn update_password(
     )
     .bind(user_id)
     .fetch_optional(&state.db)
-    .await
-    {
-        Ok(Some(user)) => user,
+    .await;
+
+    let (user, password_matches) = match user_result {
+        Ok(Some(user)) => {
+            // Check authorization first
+            if session.user.email != user.email && !session.user.is_admin {
+                error!("UNAUTHORIZED PASSWORD UPDATE ATTEMPT!");
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(PasswordUpdateResponse {
+                        response_message: "You're not permitted to perform this action".into(),
+                        response: None,
+                        error: Some("Unauthorized password update attempt".into()),
+                    }),
+                );
+            }
+
+            let password_matches = match verification_handler(&payload.old_password, &user.password).await {
+                Ok(valid) => valid,
+                Err(e) => {
+                    error!("PASSWORD VERIFICATION ERROR ON PASSWORD RESET!");
+
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(PasswordUpdateResponse {
+                            response_message: "Password verification failed".into(),
+                            response: None,
+                            error: Some(format!("Password verification error: {}", e)),
+                        }),
+                    );
+                }
+            };
+
+            (user, password_matches)
+        },
         Ok(None) => {
             error!("FAILED TO FETCH USER FOR PASSWORD UPDATE!");
 
             return (
                 StatusCode::NOT_FOUND,
-                Json(UpdateResponse {
+                Json(PasswordUpdateResponse {
                     response_message: "User not found".into(),
                     response: None,
                     error: Some("No user with this id".into()),
@@ -100,39 +121,10 @@ pub async fn update_password(
 
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(UpdateResponse {
-                    response_message: "Failed to update password".into(),
+                Json(PasswordUpdateResponse {
+                    response_message: "Failed to fetch user".into(),
                     response: None,
                     error: Some(format!("Database error: {}", e)),
-                }),
-            );
-        }
-    };
-
-    if session.user.email != user.email && !session.user.is_admin {
-        error!("UNAUTHORIZED PASSWORD UPDATE ATTEMPT!");
-
-        return (
-            StatusCode::UNAUTHORIZED,
-            Json(UpdateResponse {
-                response_message: "You're not permitted to perform this action".into(),
-                response: None,
-                error: Some("Unauthorized password update attempt".into()),
-            }),
-        );
-    }
-
-    let password_matches = match verification_handler(&payload.old_password, &user.password).await {
-        Ok(valid) => valid,
-        Err(e) => {
-            error!("PASSWORD VERIFICATION ERROR ON PASSWORD RESET!");
-
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(UpdateResponse {
-                    response_message: "Password verification failed".into(),
-                    response: None,
-                    error: Some(format!("Password verification error: {}", e)),
                 }),
             );
         }
@@ -143,7 +135,7 @@ pub async fn update_password(
 
         return (
             StatusCode::UNAUTHORIZED,
-            Json(UpdateResponse {
+            Json(PasswordUpdateResponse {
                 response_message: "Invalid old password".into(),
                 response: None,
                 error: Some("Old password does not match".into()),
@@ -158,7 +150,7 @@ pub async fn update_password(
 
             return (
                 StatusCode::BAD_REQUEST,
-                Json(UpdateResponse {
+                Json(PasswordUpdateResponse {
                     response_message: "Failed to hash password".into(),
                     response: None,
                     error: Some(format!("Password hashing error: {}", e)),
@@ -167,7 +159,7 @@ pub async fn update_password(
         }
     };
 
-    let updated_user = match sqlx::query_as::<_, UserProfile>(
+    let updated_user = match sqlx::query_as::<_, LocalUserProfile>(
         r#"
         UPDATE users
         SET password = $1, updated_at = NOW()
@@ -188,7 +180,7 @@ pub async fn update_password(
 
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(UpdateResponse {
+                Json(PasswordUpdateResponse {
                     response_message: "Failed to update password".into(),
                     response: None,
                     error: Some(format!("Database error: {}", e)),
@@ -199,7 +191,7 @@ pub async fn update_password(
 
     (
         StatusCode::OK,
-        Json(UpdateResponse {
+        Json(PasswordUpdateResponse {
             response_message: "Password updated successfully".into(),
             response: Some(updated_user),
             error: None,

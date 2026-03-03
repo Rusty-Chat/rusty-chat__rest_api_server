@@ -78,7 +78,7 @@ pub struct ReactToMessageResponse {
 
 pub async fn react_to_message(
     State(state): State<AppState>,
-    Extension(session): Extension<SessionsMiddlewareOutput>,
+    Extension(_session): Extension<SessionsMiddlewareOutput>,
     Path(message_id): Path<i64>,
     Json(payload): Json<ReactToMessagePayload>,
 ) -> impl IntoResponse {
@@ -122,7 +122,7 @@ pub async fn react_to_message(
         SELECT * FROM rooms WHERE id = $1
         "#
     )
-    .bind(&message.room_id)
+    .bind(message.room_id)
     .fetch_one(&state.db)
     .await;
 
@@ -171,7 +171,7 @@ pub async fn react_to_message(
         "SELECT * FROM message_reactions WHERE message_id = $1 AND sender_id = $2"
     )
     .bind(message_id)
-    .bind(&payload.sender_id)
+    .bind(payload.sender_id)
     .fetch_optional(&state.db)
     .await;
 
@@ -187,7 +187,7 @@ pub async fn react_to_message(
             )
             .bind(&payload.reaction_type)
             .bind(message_id)
-            .bind(&payload.sender_id)
+            .bind(payload.sender_id)
             .bind(new_updates_count)
             .fetch_one(&state.db)
             .await
@@ -200,8 +200,8 @@ pub async fn react_to_message(
                  RETURNING *"
             )
             .bind(message_id)
-            .bind(&room.id)
-            .bind(&payload.sender_id)
+            .bind(room.id)
+            .bind(payload.sender_id)
             .bind(&payload.reaction_type)
             .bind(new_updates_count)
             .fetch_one(&state.db)
@@ -286,9 +286,9 @@ pub async fn react_to_message(
                 "#
             )
             .bind(message_id)
-            .bind(&payload.sender_id)
+            .bind(payload.sender_id)
             .bind(receiver_id)
-            .bind(&message.room_id)
+            .bind(message.room_id)
             .bind(new_updates_count)
             .execute(&state.db)
             .await
@@ -311,9 +311,9 @@ pub async fn react_to_message(
                         "#
                     )
                     .bind(message_id)
-                    .bind(&payload.sender_id)
+                    .bind(payload.sender_id)
                     .bind(room_member)
-                    .bind(&message.room_id)
+                    .bind(message.room_id)
                     .bind(new_updates_count)
                     .execute(&state.db)
                     .await;
