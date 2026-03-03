@@ -1,6 +1,7 @@
 use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 
 use crate::AppState;
+use crate::domains::user::controllers::update_user::UserLookup;
 use crate::utils::file_upload_handler::{UploadType, upload_file};
 use axum::extract::State;
 use axum::{
@@ -11,14 +12,10 @@ use axum::{
     response::IntoResponse,
 };
 use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tower_cookies::Cookies;
 use tracing::error;
 
-#[derive(Debug, Deserialize)]
-pub struct UpdateProfileImagePayload {
-    pub profile_image_url: Option<String>,
-}
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct UserProfile {
@@ -41,13 +38,6 @@ pub struct UserProfile {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Debug, sqlx::FromRow)]
-struct UserLookup {
-    id: i64,
-    email: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
 
 #[derive(Debug, Serialize)]
 pub struct UpdateResponse {

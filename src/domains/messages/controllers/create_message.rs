@@ -3,17 +3,15 @@ use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 use crate::utils::current_time_in_milliseconds;
 use crate::utils::file_upload_handler::{UploadType, upload_file_from_bytes};
 use axum::{
-    Json,
     extract::{Extension, Multipart, State},
     http::StatusCode,
     response::IntoResponse,
+    Json,
 };
 use chrono::NaiveDateTime;
 use serde::Serialize;
 use sqlx::postgres::PgQueryResult;
-// use tokio::time::error::Error;
 use tracing::error;
-// use sqlx::PgQueryResult;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct Message {
@@ -31,21 +29,6 @@ pub struct Message {
     pub sent_at: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
-}
-
-#[derive(Debug, Serialize, sqlx::FromRow)]
-
-struct MessageStatusReceipt { 
-    pub id: i64,
-    pub message_id: i64,
-    pub room_id: i64,
-    pub sender_id: i64,
-    pub receiver_id: Option<i64>,
-    pub status: String,
-    pub action: String,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-    pub updates_count_tracker: i64,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -301,10 +284,10 @@ pub async fn create_message(
     // In the attachment processing loop, replace the placeholder with:
     for (field_name, bytes, filename) in attachments {
         let upload_type = match field_name.as_str() {
-            "attachment_1" => UploadType::MessageAttachment_1,
-            "attachment_2" => UploadType::MessageAttachment_2,
-            "attachment_3" => UploadType::MessageAttachment_3,
-            "attachment_4" => UploadType::MessageAttachment_4,
+            "attachment_1" => UploadType::MessageAttachment1,
+            "attachment_2" => UploadType::MessageAttachment2,
+            "attachment_3" => UploadType::MessageAttachment3,
+            "attachment_4" => UploadType::MessageAttachment4,
             _ => continue,
         };
 

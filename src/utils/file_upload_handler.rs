@@ -10,40 +10,14 @@ pub struct S3AppState {
     pub bucket_name: String,
 }
 
-#[derive(Serialize)]
-struct ErrorResponse {
-    error: String,
-}
-
-#[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct UserProfile {
-    id: i64,
-    full_name: String,
-    email: String,
-    profile_image: Option<String>,
-    access_token: String,
-    refresh_token: String,
-    status: String,
-    last_seen: Option<String>,
-    #[serde(skip_serializing)]
-    password: String,
-    is_admin: bool,
-    is_active: bool,
-}
-
-pub struct UpdateResponse {
-    response_message: String,
-    response: Option<UserProfile>,
-    error: Option<String>,
-}
 
 pub enum UploadType {
     UserProfileImage,
     RoomProfileImage,
-    MessageAttachment_1,
-    MessageAttachment_2,
-    MessageAttachment_3,
-    MessageAttachment_4,
+    MessageAttachment1,
+    MessageAttachment2,
+    MessageAttachment3,
+    MessageAttachment4,
 }
 
 pub async fn upload_file(
@@ -69,7 +43,7 @@ pub async fn upload_file(
         UploadType::UserProfileImage => {
             format!("profile_image_{}.{}", upload_id, extension)
         }
-        UploadType::MessageAttachment_1 => {
+        UploadType::MessageAttachment1 => {
             format!(
                 "message_attachment_1_{}.{}",
                 upload_id,
@@ -77,7 +51,7 @@ pub async fn upload_file(
                 extension
             )
         }
-        UploadType::MessageAttachment_2 => {
+        UploadType::MessageAttachment2 => {
             format!(
                 "message_attachment_2_{}.{}",
                 upload_id,
@@ -85,7 +59,7 @@ pub async fn upload_file(
                 extension
             )
         }
-        UploadType::MessageAttachment_3 => {
+        UploadType::MessageAttachment3 => {
             format!(
                 "message_attachment_3_{}.{}",
                 upload_id,
@@ -93,7 +67,7 @@ pub async fn upload_file(
                 extension
             )
         }
-        UploadType::MessageAttachment_4 => {
+        UploadType::MessageAttachment4 => {
             format!(
                 "message_attachment_4_{}.{}",
                 upload_id,
@@ -158,16 +132,16 @@ pub async fn upload_file_from_bytes(
         UploadType::UserProfileImage => {
             format!("profile_image_{}.{}", upload_id, extension)
         }
-        UploadType::MessageAttachment_1 => {
+        UploadType::MessageAttachment1 => {
             format!("message_attachment_1_{}.{}", upload_id, extension)
         }
-        UploadType::MessageAttachment_2 => {
+        UploadType::MessageAttachment2 => {
             format!("message_attachment_2_{}.{}", upload_id, extension)
         }
-        UploadType::MessageAttachment_3 => {
+        UploadType::MessageAttachment3 => {
             format!("message_attachment_3_{}.{}", upload_id, extension)
         }
-        UploadType::MessageAttachment_4 => {
+        UploadType::MessageAttachment4 => {
             format!("message_attachment_4_{}.{}", upload_id, extension)
         }
     };

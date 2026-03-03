@@ -9,7 +9,6 @@ use axum::{
 };
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use serde::{Deserialize, Serialize};
-use sqlx;
 use tower_cookies::Cookies;
 use tracing::error;
 
@@ -31,40 +30,10 @@ pub struct MiddlewareState {
     pub cookie_name: String,
 }
 
-#[derive(Clone, Debug)]
-pub struct SessionInfo {
-    pub user: User,
-    pub new_access_token: String,
-    pub new_refresh_token: String,
-    pub session_status: String,
-}
-
-// #[derive(Debug, Serialize, sqlx::FromRow, Clone)]
-// pub struct UserProfile {
-//     pub id: i64,
-//     pub full_name: String,
-//     pub email: String,
-//     pub profile_image_url: Option<String>,
-//     pub access_token: Option<String>,
-//     pub refresh_token: Option<String>,
-//     pub status: String,
-//     pub last_seen: Option<String>,
-//     #[serde(skip_serializing)]
-//     pub password: String,
-//     pub is_admin: bool,
-//     pub is_active: bool,
-// }
-
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
     pub error: String,
     pub response_message: String,
-}
-
-pub struct AuthTokens {
-    pub access_token: String,
-    pub refresh_token: String,
-    pub auth_cookie: String,
 }
 
 enum TokenStatus {
@@ -105,7 +74,7 @@ pub async fn access_middleware(
     next: Next,
 ) -> impl IntoResponse {
     let session_state = MiddlewareState {
-        jwt_secret: std::env::var("JWT_SECRET").expect("JWT_SECRET must be set"),
+        jwt_secret: std::env::var("APP__AUTH__JWT_SECRET").expect("APP__AUTH__JWT_SECRET must be set"),
         cookie_name: "rusty_chat_auth_cookie".to_string(),
     };
 

@@ -28,18 +28,6 @@ pub struct Message {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct MessageStatusReceipt {
-    pub id: i64,
-    pub message_id: i64,
-    pub sender_id: i64,
-    pub receiver_id: Option<i64>,
-    pub room_id: i64,
-    pub status: String,
-    pub action: String,
-    pub created_at: NaiveDateTime,
-}
-
 #[derive(Debug, Serialize)]
 pub struct ResponseCore {
     count: usize,
@@ -60,11 +48,11 @@ pub struct SearchParams {
 
 pub async fn get_room_messages(
     State(state): State<AppState>,
-    Extension(session): Extension<SessionsMiddlewareOutput>,
+    Extension(_session): Extension<SessionsMiddlewareOutput>,
     Query(params): Query<SearchParams>,
     Path(room_id): Path<i64>,
 ) -> impl IntoResponse {
-    let user_id = params.user_id;
+    let _user_id = params.user_id;
 
     // Step 1: Fetch all the messages in this room
     let messages_result = sqlx::query_as::<_, Message>(

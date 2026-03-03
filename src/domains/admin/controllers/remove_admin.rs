@@ -2,7 +2,7 @@ use crate::AppState;
 use axum::extract::{Path, State};
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tower_cookies::Cookies;
 use tracing::error;
 
@@ -13,10 +13,6 @@ pub struct LogoutResponse {
     error: Option<String>,
 }
 
-#[derive(Deserialize)]
-pub struct SearchParams {
-    user_email: String,
-}
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct UserProfile {

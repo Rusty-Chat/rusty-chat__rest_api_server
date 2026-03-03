@@ -1,7 +1,7 @@
 use crate::AppState;
 use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 use axum::{
-    extract::{Path, State, Extension},
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -37,7 +37,7 @@ pub struct BookmarkResponse {
 
 pub async fn un_bookmark_message(
     State(state): State<AppState>,
-    Extension(session): Extension<SessionsMiddlewareOutput>,
+    Extension(_session): Extension<SessionsMiddlewareOutput>,
     Path((message_id, user_id)): Path<(i64, i64)>,
 ) -> impl IntoResponse {
     let res = sqlx::query(

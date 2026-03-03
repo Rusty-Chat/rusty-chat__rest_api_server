@@ -46,9 +46,9 @@ pub struct UserProfile {
 }
 
 #[derive(Debug, sqlx::FromRow)]
-struct UserLookup {
+pub struct UserLookup {
     id: i64,
-    email: String,
+    pub email: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -125,7 +125,6 @@ pub async fn update_user(
         param_index += 1;
 
         set_clauses.push(format!("refresh_token = ${}", param_index));
-        param_index += 1;
     }
 
     // Let password have its own dedicated end-point

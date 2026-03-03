@@ -67,7 +67,7 @@ pub async fn get_user_rooms(
     let user_result = sqlx::query_as::<_, UserProfile>(
         "SELECT id, full_name, email, profile_image, password, is_active, is_admin, country, phone_number, is_logged_out, status, created_at, updated_at FROM users WHERE id = $1",
     )
-    .bind(&user_id)
+    .bind(user_id)
     .fetch_optional(&state.db)
     .await;
 

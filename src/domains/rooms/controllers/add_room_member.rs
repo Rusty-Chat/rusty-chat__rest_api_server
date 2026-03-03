@@ -49,16 +49,14 @@ pub async fn add_room_member(
     Path(room_id): Path<i64>,
     Json(payload): Json<AddMemberPayload>,
 ) -> impl IntoResponse {
-    if let Some(ref role) = payload.role {
-        if role != "admin" && role != "member" {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(Response {
-                    response_message: "Invalid role".into(),
-                    error: Some("Role must be 'admin' or 'member'".into()),
-                }),
-            );
-        }
+    if let Some(ref role) = payload.role && role != "admin" && role != "member" {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(Response {
+                response_message: "Invalid role".into(),
+                error: Some("Role must be 'admin' or 'member'".into()),
+            }),
+        );
     }
     let joined_at = current_time_millis().to_string();
 

@@ -7,53 +7,9 @@ use axum::{
     middleware::Next,
     response::IntoResponse,
 };
-use serde::{Deserialize, Serialize};
+use crate::middlewares::auth_access_middleware::ErrorResponse;
 use sqlx;
 use tracing::error;
-
-// ============================================================================
-// Types/Structures
-// ============================================================================
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct JwtClaims {
-    pub id: i64,
-    pub email: String,
-    pub exp: usize,
-    pub iat: usize,
-}
-
-#[derive(Clone)]
-pub struct MiddlewareState {
-    pub jwt_secret: String,
-    pub cookie_name: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct SessionInfo {
-    pub user: User,
-    pub new_access_token: String,
-    pub new_refresh_token: String,
-    pub session_status: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-    pub error: String,
-    pub response_message: String,
-}
-
-pub struct AuthTokens {
-    pub access_token: String,
-    pub refresh_token: String,
-    pub auth_cookie: String,
-}
-
-enum TokenStatus {
-    Valid,
-    Expired,
-    Invalid(String),
-}
 
 // ============================================================================
 // Middleware Implementation

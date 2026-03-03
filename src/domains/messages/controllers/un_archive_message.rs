@@ -1,11 +1,5 @@
 use crate::AppState;
-use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
-use axum::{
-    extract::{Path, State, Extension},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse, Json};
 use chrono::NaiveDateTime;
 use serde::Serialize;
 use tracing::error;

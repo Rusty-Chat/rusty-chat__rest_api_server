@@ -95,7 +95,7 @@ pub async fn update_room(
     let member_result = sqlx::query_as::<_, RoomMemberLookup>(
         "SELECT role FROM room_members WHERE room_id = $1 AND user_id = $2",
     )
-    .bind(&room.id)
+    .bind(room.id)
     .bind(session.user.id)
     .fetch_optional(&state.db)
     .await;
@@ -159,7 +159,7 @@ pub async fn update_room(
         set_clauses.join(", ")
     );
 
-    let mut query_builder = sqlx::query_as::<_, Room>(&query).bind(&room.id);
+    let mut query_builder = sqlx::query_as::<_, Room>(&query).bind(room.id);
 
     if let Some(room_name) = payload.room_name {
         query_builder = query_builder.bind(room_name);

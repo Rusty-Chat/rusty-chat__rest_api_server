@@ -71,7 +71,7 @@ pub async fn sessions_middleware(
     next: Next,
 ) -> impl IntoResponse {
     let session_state = MiddlewareState {
-        jwt_secret: std::env::var("JWT_SECRET").expect("JWT_SECRET must be set"),
+        jwt_secret: std::env::var("APP__AUTH__JWT_SECRET").expect("APP__AUTH__JWT_SECRET must be set"),
         cookie_name: "rusty_chat_auth_cookie".to_string(),
     };
 

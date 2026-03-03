@@ -33,12 +33,6 @@ pub struct UserResponse {
     error: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct UsersResponse {
-    response_message: String,
-    response: Option<Vec<UserProfile>>,
-    error: Option<String>,
-}
 
 pub async fn get_user(
     // Extension(session): Extension<SessionUser>,
