@@ -1,13 +1,28 @@
 [app]
 environment = "development"
-# log_level = "warn"
 
-# [server]
-# port = 80
+[database]
+engine = "postgres"
+host = "localhost"
+port = 5433
+user = "<db-user>" # will be overridden (with real values) from the expected environment variables file
+password = "<db-password>" # will be overridden (with real values) from the expected environment variables file
+name = "<db-name>" # will be overridden (with real values) from the expected environment variables file
+max_connections = 20
+connect_timeout_secs = 5
 
-# [database]
-# host = "prod-db.internal"
-# max_connections = 100
+[auth]
+jwt_secret = "default_secret" # will be overridden (with real values) from the expected environment variables file
+jwt_access_expiration_time_in_hours = 1
+jwt_session_expiration_time_in_hours = 24
+jwt_one_time_password_lifetime_in_minutes = 5
+
+[aws]
+access_key = "<aws-access-key>" # will be overridden (with real values) from the expected environment variables file
+secret_access_key = "<aws-secret-access-key>" # will be overridden (with real values) from the expected environment variables file
+bucket_url = "<aws-bucket-url>" # will be overridden (with real values) from the expected environment variables file
+s3_bucket_region = "<aws-s3-bucket-region>" # will be overridden (with real values) from the expected environment variables file
+s3_bucket_name = "<aws-s3-bucket-name>" # will be overridden (with real values) from the expected environment variables file
 
 [observability]
 enable_tracing = true
