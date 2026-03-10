@@ -4,12 +4,13 @@
 .env.development
 .env.production
 .env.staging
-.env.template
 .env
-.env*
 
 # extras
 .idea
 .vscode
 bash.exe.stackdump
-#NOTES.md
+NOTES.md
+
+# node_modules
+node_modules
