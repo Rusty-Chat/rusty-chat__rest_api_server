@@ -2,12 +2,12 @@ use aws_sdk_s3::Client;
 use axum::extract::State;
 use axum::extract::multipart::{Field, MultipartError};
 use serde::Serialize;
-use std::env;
 
 #[derive(Clone, Debug)]
 pub struct S3AppState {
     pub s3_client: Client,
     pub bucket_name: String,
+    pub bucket_url: String,
 }
 
 #[derive(Serialize)]
@@ -103,14 +103,7 @@ pub async fn upload_file(
         }
     };
 
-    let aws_region = env::var("AWS_S3_BUCKET_REGION").expect("AWS_S3_BUCKET_REGION must be set");
-
-    // Construct the S3 URL
-    // Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
-    let file_url = format!(
-        "https://{}.s3.{}.amazonaws.com/{}",
-        state.s3.bucket_name, aws_region, file_key
-    );
+    let file_url = format!("{}/{}", state.s3.bucket_url.trim_end_matches('/'), file_key);
 
     let content_type = field
         .content_type()
@@ -146,10 +139,7 @@ pub async fn upload_file_from_bytes(
     upload_type: UploadType,
 ) -> Result<String, String> {
     // Extract extension from filename
-    let extension = filename
-        .split('.')
-        .next_back()
-        .unwrap_or("bin");
+    let extension = filename.split('.').next_back().unwrap_or("bin");
 
     let file_key = match upload_type {
         UploadType::RoomProfileImage => {
@@ -172,12 +162,7 @@ pub async fn upload_file_from_bytes(
         }
     };
 
-    let aws_region = env::var("AWS_S3_BUCKET_REGION").expect("AWS_S3_BUCKET_REGION must be set");
-
-    let file_url = format!(
-        "https://{}.s3.{}.amazonaws.com/{}",
-        state.s3.bucket_name, aws_region, file_key
-    );
+    let file_url = format!("{}/{}", state.s3.bucket_url.trim_end_matches('/'), file_key);
 
     // Infer content type from extension
     let content_type = match extension {
@@ -245,7 +230,7 @@ pub async fn upload_file_from_bytes(
 //         }
 //     };
 
-//     let aws_region = env::var("AWS_S3_BUCKET_REGION").expect("AWS_S3_BUCKET_REGION must be set");
+//     let aws_region = state.config.aws.as_ref().unwrap().s3_bucket_region.clone();
 
 //     let file_url = format!(
 //         "https://{}.s3.{}.amazonaws.com/{}",

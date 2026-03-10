@@ -70,8 +70,22 @@ pub async fn sessions_middleware(
     mut req: Request,
     next: Next,
 ) -> impl IntoResponse {
+    let auth_config = match state.config.auth.as_ref() {
+        Some(config) => config,
+        None => {
+            error!("AUTH CONFIGURATION MISSING!");
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Server Error".to_string(),
+                    response_message: "Auth configuration is missing".to_string(),
+                }),
+            ));
+        }
+    };
+
     let session_state = MiddlewareState {
-        jwt_secret: std::env::var("JWT_SECRET").expect("JWT_SECRET must be set"),
+        jwt_secret: auth_config.jwt_secret.clone(),
         cookie_name: "rusty_chat_auth_cookie".to_string(),
     };
 

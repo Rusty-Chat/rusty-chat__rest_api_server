@@ -2,7 +2,7 @@ use crate::AppState;
 use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 use axum::{
     Json,
-    extract::{Extension, Path, State, Query},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -43,7 +43,7 @@ pub struct MessageStatusReceipt {
 #[derive(Debug, Serialize)]
 pub struct ResponseCore {
     count: usize,
-    messages: Option<Vec<Message>>
+    messages: Option<Vec<Message>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -73,7 +73,7 @@ pub async fn get_room_messages(
         FROM messages 
         WHERE room_id = $1 
         ORDER BY created_at ASC
-        "#
+        "#,
     )
     .bind(room_id)
     .fetch_all(&state.db)
@@ -82,16 +82,17 @@ pub async fn get_room_messages(
     match messages_result {
         Ok(msgs) => {
             return (
-            StatusCode::OK,
-            Json(GetRoomMessagesResponse {
-                response_message: "Room messages fetched successfully".to_string(),
-                response: Some(ResponseCore {
-                    count: msgs.len(),
-                    messages: Some(msgs),
+                StatusCode::OK,
+                Json(GetRoomMessagesResponse {
+                    response_message: "Room messages fetched successfully".to_string(),
+                    response: Some(ResponseCore {
+                        count: msgs.len(),
+                        messages: Some(msgs),
+                    }),
+                    error: None,
                 }),
-                error: None,
-            }))
-        },
+            );
+        }
         Err(e) => {
             error!("FAILED TO FETCH ROOM MESSAGES!");
             return (

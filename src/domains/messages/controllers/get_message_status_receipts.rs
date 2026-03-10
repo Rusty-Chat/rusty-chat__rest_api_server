@@ -36,7 +36,7 @@ pub async fn get_message_status_receipts(
     Path(message_id): Path<i64>,
 ) -> impl IntoResponse {
     let receipts_res = sqlx::query_as::<_, MessageStatusReceipt>(
-        "SELECT * FROM message_status_receipts WHERE message_id = $1 ORDER BY created_at DESC"
+        "SELECT * FROM message_status_receipts WHERE message_id = $1 ORDER BY created_at DESC",
     )
     .bind(message_id)
     .fetch_all(&state.db)

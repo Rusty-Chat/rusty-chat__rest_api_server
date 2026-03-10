@@ -1,21 +1,43 @@
+//! # PostgreSQL Connection Handler
+//!
+//! This module provides functionality for establishing and managing
+//! the connection pool to the PostgreSQL database.
+
 use sqlx::postgres::PgPoolOptions;
 use std::time::Duration;
 
-pub async fn connect_pg(database_url: String) -> sqlx::PgPool {
-    // println!("Attempting to connect to PostgreSQL database...");
-
+/// Establishes a connection to the PostgreSQL database.
+///
+/// # Arguments
+/// - `database_url`: The full connection string (e.g., `postgres://user:pass@host:port/dbname`).
+/// - `max_connections`: Maximum number of concurrent connections in the pool.
+/// - `acquire_timeout_secs`: Timeout in seconds for acquiring a connection from the pool.
+///
+/// # Panics
+/// Panics if the connection fails, providing a detailed troubleshooting guide.
+pub async fn connect_pg(
+    database_url: String,
+    max_connections: u32,
+    acquire_timeout_secs: u64,
+) -> sqlx::PgPool {
     let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(Duration::from_secs(3))
+        .max_connections(max_connections)
+        .acquire_timeout(Duration::from_secs(acquire_timeout_secs))
         .connect(&database_url)
         .await;
 
     match pool {
-        Ok(p) => {
-            // println!("Successfully connected to PostgreSQL database.");
-            p
-        }
+        Ok(p) => p,
         Err(e) => {
+            let redacted_url = match url::Url::parse(&database_url) {
+                Ok(mut u) => {
+                    let _ = u.set_password(None::<&str>);
+                    let _ = u.set_username("...");
+                    u.to_string()
+                }
+                Err(_) => "INVALID_DB_URL".to_string(),
+            };
+
             println!(
                 "
                 CRITICAL DATABASE CONNECTION ERROR:
@@ -27,10 +49,10 @@ pub async fn connect_pg(database_url: String) -> sqlx::PgPool {
                 1. Is Postgres running?
                 2. Is the connection URL correct?
                 3. Are the credentials valid?
-                4. Is the network allowing connection to port 5432?
+                4. Is the network allowing connection to the configured port?
                 -------------------------------------------------
                 ",
-                e, database_url
+                e, redacted_url
             );
 
             panic!("DATABASE CONNECTION FAILED: {}", e);

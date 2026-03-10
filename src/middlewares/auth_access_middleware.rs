@@ -2,14 +2,13 @@ use crate::middlewares::auth_sessions_middleware::{SessionsMiddlewareOutput, Use
 use crate::utils::generate_tokens::{User, generate_tokens};
 use axum::{
     Json,
-    extract::Request,
+    extract::{Request, State},
     http::{StatusCode, header},
     middleware::Next,
     response::IntoResponse,
 };
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use serde::{Deserialize, Serialize};
-use sqlx;
 use tower_cookies::Cookies;
 use tracing::error;
 
@@ -99,13 +98,27 @@ fn verify_access_token(token: &str, secret: &str, user: &UserProfile) -> TokenSt
 // ============================================================================
 
 pub async fn access_middleware(
-    // State(state): State<crate::AppState>,
+    State(state): State<crate::AppState>,
     cookies: Cookies,
     req: Request,
     next: Next,
 ) -> impl IntoResponse {
+    let auth_config = match state.config.auth.as_ref() {
+        Some(config) => config,
+        None => {
+            error!("AUTH CONFIGURATION MISSING!");
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Server Error".to_string(),
+                    response_message: "Auth configuration is missing".to_string(),
+                }),
+            ));
+        }
+    };
+
     let session_state = MiddlewareState {
-        jwt_secret: std::env::var("JWT_SECRET").expect("JWT_SECRET must be set"),
+        jwt_secret: auth_config.jwt_secret.clone(),
         cookie_name: "rusty_chat_auth_cookie".to_string(),
     };
 
@@ -185,6 +198,7 @@ pub async fn access_middleware(
             id: sessions_middleware_output.user.id,
             email: sessions_middleware_output.user.email.clone(),
         },
+        state.config.as_ref(),
     )
     .await
     {

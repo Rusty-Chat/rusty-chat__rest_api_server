@@ -13,7 +13,7 @@ use tracing::error;
 #[derive(Debug, Deserialize)]
 pub struct UpdateMessagePayload {
     pub text_content: String,
-    pub sender_id: i64
+    pub sender_id: i64,
 }
 
 #[derive(sqlx::Type, Debug)]
@@ -89,7 +89,7 @@ pub async fn update_message(
         Ok(Some(m)) => m,
         Ok(None) => {
             error!("MESSAGE NOT FOUND!");
-            
+
             return (
                 StatusCode::NOT_FOUND,
                 Json(UpdateMessageResponse {
@@ -101,7 +101,7 @@ pub async fn update_message(
         }
         Err(e) => {
             error!("DATABASE ERROR!");
-            
+
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(UpdateMessageResponse {
@@ -116,7 +116,7 @@ pub async fn update_message(
     // 2. Check permissions (only sender can update)
     if message.sender_id != Some(payload.sender_id) {
         error!("UNAUTHORIZED MESSAGE UPDATE ATTEMPT!");
-        
+
         return (
             StatusCode::FORBIDDEN,
             Json(UpdateMessageResponse {
@@ -157,7 +157,7 @@ pub async fn update_message(
 
     if let Err(e) = history_res {
         error!("FAILED TO SAVE MESSAGE TO EDIT HISTORY!");
-        
+
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(UpdateMessageResponse {
@@ -175,7 +175,7 @@ pub async fn update_message(
     let room_res = sqlx::query_as::<_, Room>(
         r#"
         SELECT * FROM rooms WHERE id = $1
-        "#
+        "#,
     )
     .bind(&message.room_id)
     .fetch_one(&state.db)
@@ -195,7 +195,7 @@ pub async fn update_message(
             );
         }
     };
-    
+
     // Update message
     let update_res = sqlx::query_as::<_, Message>(
         "UPDATE messages SET text_content = $1, updates_counter = $2, status = 'updated', updated_at = NOW() WHERE id = $3 RETURNING *",
@@ -203,7 +203,7 @@ pub async fn update_message(
     .bind(&payload.text_content)
     .bind(&new_updates_count)
     .bind(message_id)
-    .fetch_one(&state.db)   
+    .fetch_one(&state.db)
     .await;
 
     match update_res {
@@ -225,12 +225,12 @@ pub async fn update_message(
                     .execute(&state.db)
                     .await
                     .map(|_| ());
-                },
+                }
                 true => {
                     let mut temp_res = Ok(());
                     if let Some(members) = &room.co_members {
                         for room_member in members {
-                             let res = sqlx::query(
+                            let res = sqlx::query(
                                 r#"
                                 INSERT INTO message_status_receipts (message_id, sender_id, receiver_id, room_id, action, status, updates_count_tracker)
                                 VALUES ($1, $2, $3, $4, 'edit', 'updated', $5)
@@ -251,26 +251,24 @@ pub async fn update_message(
                         }
                     }
                     receipt_res = temp_res;
-                },
+                }
             }
 
             match receipt_res {
-                Ok(_) => {
-                    
-                }, 
+                Ok(_) => {}
                 Err(_e) => {
-                    {
-                       error!("MESSAGE UPDATED SUCCESSFULLY, BUT FAILED TO CREATE MESSAGE STATUS RECEIPT!");
-                       
-                       return (
+                    error!(
+                        "MESSAGE UPDATED SUCCESSFULLY, BUT FAILED TO CREATE MESSAGE STATUS RECEIPT!"
+                    );
+
+                    return (
                            StatusCode::OK,
                            Json(UpdateMessageResponse {
                                response_message: "Message updated successfully but failed to create message status receipt".to_string(),
                                response: Some(updated_message),
                                error: None,
                            }),
-                       )
-                   }    
+                       );
                 }
             }
 
@@ -285,7 +283,7 @@ pub async fn update_message(
         }
         Err(e) => {
             error!("FAILED TO UPDATE MESSAGE!");
-            
+
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(UpdateMessageResponse {

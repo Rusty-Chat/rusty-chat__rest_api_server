@@ -1,10 +1,10 @@
 use crate::AppState;
 use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 use axum::{
-    extract::{Path, State, Extension},
+    Json,
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::NaiveDateTime;
 use serde::Serialize;
@@ -42,7 +42,7 @@ pub async fn archive_message(
 ) -> impl IntoResponse {
     // First, archive the message
     let archive_res = sqlx::query(
-        "INSERT INTO message_archives (user_id, message_id) VALUES ($1, $2) ON CONFLICT DO NOTHING"
+        "INSERT INTO message_archives (user_id, message_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
     )
     .bind(user_id)
     .bind(message_id)
@@ -73,14 +73,15 @@ pub async fn archive_message(
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         Json(ArchiveResponse {
-                            response_message: "Message archived but failed to fetch details".to_string(),
+                            response_message: "Message archived but failed to fetch details"
+                                .to_string(),
                             response: None,
                             error: Some(e.to_string()),
                         }),
                     )
                 }
             }
-        },
+        }
         Err(e) => {
             error!("FAILED_TO_ARCHIVE_MESSAGE!");
             (

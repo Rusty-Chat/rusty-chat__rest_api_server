@@ -1,10 +1,10 @@
 use crate::AppState;
 use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 use axum::{
-    extract::{Path, State, Extension},
+    Json,
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
@@ -55,7 +55,7 @@ pub async fn delete_message(
         Ok(Some(m)) => m,
         Ok(None) => {
             error!("MESSAGE NOT FOUND!");
-            
+
             return (
                 StatusCode::NOT_FOUND,
                 Json(DeleteMessageResponse {
@@ -67,7 +67,7 @@ pub async fn delete_message(
         }
         Err(e) => {
             error!("DATABASE ERROR!");
-            
+
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(DeleteMessageResponse {
@@ -82,7 +82,7 @@ pub async fn delete_message(
     // 2. Check permissions (sender or admin)
     if message.sender_id != Some(sender_id) && !session.user.is_admin {
         error!("UNAUTHORIZED MESSAGE DELETE ATTEMPT!");
-        
+
         return (
             StatusCode::FORBIDDEN,
             Json(DeleteMessageResponse {
@@ -110,7 +110,7 @@ pub async fn delete_message(
         ),
         Err(e) => {
             error!("FAILED_TO_DELETE_MESSAGE!");
-            
+
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(DeleteMessageResponse {

@@ -13,11 +13,11 @@ use crate::domains::rooms::controllers::get_all_private_rooms::get_all_private_r
 use crate::domains::rooms::controllers::get_all_rooms::get_all_rooms;
 use crate::domains::rooms::controllers::get_room::get_room;
 use crate::domains::rooms::controllers::get_user_rooms::get_user_rooms;
+use crate::domains::rooms::controllers::pin_room::pin_room;
 use crate::domains::rooms::controllers::unarchive_room::unarchive_room;
 use crate::domains::rooms::controllers::unbookmark_room::unbookmark_room;
-use crate::domains::rooms::controllers::update_room::update_room;
-use crate::domains::rooms::controllers::pin_room::pin_room;
 use crate::domains::rooms::controllers::unpin_room::unpin_room;
+use crate::domains::rooms::controllers::update_room::update_room;
 
 use crate::domains::rooms::controllers::add_room_admin::add_room_admin;
 use crate::domains::rooms::controllers::remove_room_admin::remove_room_admin;

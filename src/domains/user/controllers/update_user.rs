@@ -232,6 +232,7 @@ pub async fn update_user(
                 id: user.id,
                 email: user.email,
             },
+            state.config.as_ref(),
         )
         .await
         {
@@ -249,7 +250,7 @@ pub async fn update_user(
             }
         };
 
-        deploy_auth_cookie(cookies, tokens.auth_cookie.unwrap()).await;
+        deploy_auth_cookie(cookies, tokens.auth_cookie.unwrap(), state.config.as_ref()).await;
 
         query_builder = query_builder.bind(email);
 
