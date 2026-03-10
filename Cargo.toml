@@ -1,7 +1,11 @@
 [package]
-name = "rust-axum-http-server"
+name = "chat_core_rest_api_server"
 version = "0.1.0"
 edition = "2024"
+description = "Core REST API server for Krabby the chat implementation"
+repository = "https://github.com/KrabbyHQ/chat__core_rest_api_server"
+homepage = "https://github.com/KrabbyHQ/chat__core_rest_api_server"
+license = "MIT"
 
 [dependencies]
 argon2 = "0.5.3"
@@ -24,3 +28,5 @@ aws-credential-types = { version = "1.2.11", features = ["hardcoded-credentials"
 anyhow = "1.0.100"
 config = "0.15.19"
 uuid = { version = "1.15.1", features = ["v4"] }
+thiserror = "2.0.17"
+url = "2.5.7"
