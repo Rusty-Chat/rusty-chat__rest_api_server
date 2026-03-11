@@ -35,7 +35,7 @@ pub struct Message {
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 
-struct MessageStatusReceipt { 
+struct MessageStatusReceipt {
     pub id: i64,
     pub message_id: i64,
     pub room_id: i64,
@@ -91,7 +91,7 @@ pub async fn create_message(
     let mut sender_id: Option<i64> = None;
     let mut message_type: Option<String> = None;
     let mut text_content: Option<String> = None;
-    
+
     // Store attachment data for later upload
     let mut attachments: Vec<(String, Vec<u8>, String)> = Vec::new(); // (field_name, bytes, filename)
 
@@ -105,7 +105,7 @@ pub async fn create_message(
                     Ok(id) => id,
                     Err(_) => {
                         error!("FAILED TO GET ROOM ID!");
-                        
+
                         return (
                             StatusCode::BAD_REQUEST,
                             Json(CreateMessageResponse {
@@ -139,7 +139,7 @@ pub async fn create_message(
                     Ok(id) => id,
                     Err(_) => {
                         error!("FAILED TO GET SENDER ID!");
-                        
+
                         return (
                             StatusCode::BAD_REQUEST,
                             Json(CreateMessageResponse {
@@ -156,7 +156,7 @@ pub async fn create_message(
                     Ok(id) => id,
                     Err(_) => {
                         error!("FAILED TO PARSE SENDER ID!");
-                        
+
                         return (
                             StatusCode::BAD_REQUEST,
                             Json(CreateMessageResponse {
@@ -187,7 +187,7 @@ pub async fn create_message(
                     Ok(Some(_)) => (),
                     Ok(None) => {
                         error!("SENDER IS NOT A MEMBER OF THIS ROOM!");
-                        
+
                         return (
                             StatusCode::FORBIDDEN,
                             Json(CreateMessageResponse {
@@ -199,7 +199,7 @@ pub async fn create_message(
                     }
                     Err(e) => {
                         error!("FAILED TO VERIFY ROOM MEMBERSHIP!");
-                        
+
                         return (
                             StatusCode::INTERNAL_SERVER_ERROR,
                             Json(CreateMessageResponse {
@@ -233,7 +233,7 @@ pub async fn create_message(
     let room_res = sqlx::query_as::<_, Room>(
         r#"
         SELECT * FROM rooms WHERE id = $1
-        "#
+        "#,
     )
     .bind(&room_id)
     .fetch_one(&state.db)
@@ -308,14 +308,8 @@ pub async fn create_message(
             _ => continue,
         };
 
-        if let Ok(url) = upload_file_from_bytes(
-            State(&state),
-            bytes,
-            &filename,
-            &message.id,
-            upload_type,
-        )
-        .await
+        if let Ok(url) =
+            upload_file_from_bytes(State(&state), bytes, &filename, &message.id, upload_type).await
         {
             match field_name.as_str() {
                 "attachment_1" => attachment_1 = Some(url),
@@ -334,7 +328,7 @@ pub async fn create_message(
         SET attachment_1 = $1, attachment_2 = $2, attachment_3 = $3, attachment_4 = $4
         WHERE id = $5
         RETURNING *
-        "#
+        "#,
     )
     .bind(&attachment_1)
     .bind(&attachment_2)
@@ -364,12 +358,12 @@ pub async fn create_message(
                     .execute(&state.db)
                     .await
                     .map(|_| ());
-                },
+                }
                 true => {
                     let mut temp_res = Ok(());
                     if let Some(members) = &room.co_members {
                         for room_member in members {
-                             let res = sqlx::query(
+                            let res = sqlx::query(
                                 r#"
                                 INSERT INTO message_status_receipts (message_id, sender_id, receiver_id, room_id, action, status)
                                 VALUES ($1, $2, $3, $4, 'original-send', 'sent')
@@ -389,29 +383,27 @@ pub async fn create_message(
                         }
                     }
                     receipt_res = temp_res;
-                },
+                }
             }
 
             match receipt_res {
-                Ok(_) => {
-                    
-                }, 
+                Ok(_) => {}
                 Err(_e) => {
-                    {
-                       error!("MESSAGE CREATED SUCCESSFULLY, BUT FAILED TO CREATE MESSAGE STATUS RECEIPT!");
-                       
-                       return (
+                    error!(
+                        "MESSAGE CREATED SUCCESSFULLY, BUT FAILED TO CREATE MESSAGE STATUS RECEIPT!"
+                    );
+
+                    return (
                            StatusCode::CREATED,
                            Json(CreateMessageResponse {
                                response_message: "Message created successfully but failed to create message status receipt".to_string(),
                                response: Some(msg),
                                error: None,
                            }),
-                       )
-                   }    
+                       );
                 }
             }
-    
+
             (
                 StatusCode::CREATED,
                 Json(CreateMessageResponse {
@@ -420,18 +412,18 @@ pub async fn create_message(
                     error: None,
                 }),
             )
-        },
+        }
         Err(e) => {
             error!("MESSAGE CREATED, BUT FAILED TO UPLOAD ATTACHMENTS!");
             // Return the message anyway since it was created, just without attachments
             (
-            StatusCode::CREATED,
-            Json(CreateMessageResponse {
-                response_message: "Message created but failed to add attachments".to_string(),
+                StatusCode::CREATED,
+                Json(CreateMessageResponse {
+                    response_message: "Message created but failed to add attachments".to_string(),
                     response: Some(message),
-                error: Some(e.to_string()),
-            }),
-        )
+                    error: Some(e.to_string()),
+                }),
+            )
         }
     }
 }

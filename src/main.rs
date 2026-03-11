@@ -1,11 +1,9 @@
+use anyhow::{Context, Result};
 use axum::{Router, middleware};
 use sqlx::PgPool;
-use std::sync::Arc;
-
 use std::net::SocketAddr;
-
-// environmental variables...
-use std::env;
+use std::sync::Arc;
+use tokio::net::lookup_host;
 
 // AWS S3
 use crate::utils::file_upload_handler::S3AppState;
@@ -14,6 +12,7 @@ use aws_credential_types::Credentials;
 use aws_sdk_s3::Client;
 
 // logging init with the tracing crate
+use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use tracing::error;
 use tracing::info;
 use tracing_subscriber::fmt::time::SystemTime;
@@ -29,7 +28,6 @@ use db::connect_postgres::connect_pg;
 // controllers import
 mod domains;
 use crate::domains::admin::router::admin_routes;
-use crate::domains::auth::router::auth_routes;
 use crate::domains::messages::router::messages_routes;
 use crate::domains::rooms::router::rooms_routes;
 use crate::domains::user::router::user_routes;
@@ -59,63 +57,119 @@ async fn main() {
     load_env();
     initialize_logging();
 
-    let app_config = load_config();
-
-    let clean_config = match app_config {
+    let clean_config = match load_config() {
         Ok(config) => {
-            // println!("Configuration loaded successfully: {}", config.app.name);
-
-            if config.validate().is_err() {
-                error!("SERVER START-UP ERROR: FAILED TO LOAD SERVER CONFIGURATIONS!");
-
-                return;
+            if let Err(e) = config.validate() {
+                error!(
+                    "SERVER START-UP ERROR: FAILED TO LOAD SERVER CONFIGURATIONS, {}!",
+                    e
+                );
+                std::process::exit(1);
             }
 
             config
         }
-        Err(_e) => {
-            error!("SERVER START-UP ERROR: FAILED TO LOAD SERVER CONFIGURATIONS!");
-            return;
+        Err(e) => {
+            error!(
+                "SERVER START-UP ERROR: FAILED TO LOAD SERVER CONFIGURATIONS, {}!",
+                e
+            );
+            std::process::exit(1);
         }
     };
 
-    let access_key_id = env::var("AWS_ACCESS_KEY").unwrap();
-    let secret_access_key = env::var("AWS_SECRET_ACCESS_KEY").unwrap();
-    // let aws_url = env::var("AWS_BUCKET_URL").unwrap();
-    let aws_region = env::var("AWS_S3_BUCKET_REGION").expect("AWS_S3_BUCKET_REGION must be set");
+    let aws_config_ref = match clean_config.aws.as_ref() {
+        Some(config) => config,
+        None => {
+            error!("SERVER START-UP ERROR: AWS CONFIGURATION IS MISSING!");
+            std::process::exit(1);
+        }
+    };
 
     // note here that the "None" is in place of a session token
-    let s3_credentials = Credentials::from_keys(access_key_id, secret_access_key, None);
+    let s3_credentials = Credentials::from_keys(
+        aws_config_ref.access_key.clone(),
+        aws_config_ref.secret_access_key.clone(),
+        None,
+    );
 
     let s3_config = aws_config::from_env()
-        // .endpoint_url(aws_url)
-        .region(Region::new(aws_region))
+        .region(Region::new(aws_config_ref.s3_bucket_region.clone()))
         .credentials_provider(s3_credentials)
         .load()
         .await;
 
-    // Initialize AWS S3 config
-    // let config = aws_config::load_from_env().await;
     let s3_client = Client::new(&s3_config);
-
-    let bucket_name = std::env::var("AWS_S3_BUCKET_NAME").expect("AWS_S3_BUCKET_NAME must be set");
 
     let s3_state = S3AppState {
         s3_client,
-        bucket_name,
+        bucket_name: aws_config_ref.s3_bucket_name.clone(),
+        bucket_url: aws_config_ref.bucket_url.clone(),
     };
 
-    // let port = env::var("PORT").unwrap_or("8000".to_string());
-    let environment = env::var("DEPLOY_ENV").unwrap_or("development".to_string());
-    let user = env::var("POSTGRES_USER").unwrap();
-    let pass = env::var("POSTGRES_PASSWORD").unwrap();
-    let host = env::var("POSTGRES_HOST").unwrap();
-    let db_port = env::var("POSTGRES_PORT").unwrap();
-    let db = env::var("POSTGRES_DB").unwrap();
+    let db_config = match clean_config.database.as_ref() {
+        Some(config) => config,
+        None => {
+            error!("SERVER START-UP ERROR: DATABASE CONFIGURATION IS MISSING!");
+            std::process::exit(1);
+        }
+    };
 
-    let database_url = format!("postgres://{}:{}@{}:{}/{}", user, pass, host, db_port, db);
+    let db_user = match db_config.user.as_deref() {
+        Some(user) => user,
+        None => {
+            error!("SERVER START-UP ERROR: DATABASE USER IS MISSING!");
+            std::process::exit(1);
+        }
+    };
 
-    let db_pool = connect_pg(database_url.clone()).await;
+    let db_password = match db_config.password.as_deref() {
+        Some(password) => password,
+        None => {
+            error!("SERVER START-UP ERROR: DATABASE PASSWORD IS MISSING!");
+            std::process::exit(1);
+        }
+    };
+
+    let encoded_user = utf8_percent_encode(db_user, NON_ALPHANUMERIC).to_string();
+    let encoded_password = utf8_percent_encode(db_password, NON_ALPHANUMERIC).to_string();
+
+    let database_url = format!(
+        "postgres://{}:{}@{}:{}/{}",
+        encoded_user, encoded_password, db_config.host, db_config.port, db_config.name
+    );
+    let db_host = db_config.host.clone();
+    let db_port = db_config.port;
+
+    let db_pool = match connect_pg(
+        database_url.clone(),
+        db_config.max_connections,
+        db_config.connect_timeout_secs,
+    )
+    .await
+    {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("SERVER START-UP ERROR: DATABASE CONNECTION FAILED: {}!", e);
+            std::process::exit(1);
+        }
+    };
+
+    let server_config = match clean_config.server.as_ref() {
+        Some(config) => config,
+        None => {
+            error!("SERVER START-UP ERROR: SERVER CONFIGURATION IS MISSING!");
+            std::process::exit(1);
+        }
+    };
+
+    let host = server_config.host.clone();
+    let port = server_config.port;
+    let environment = clean_config
+        .app
+        .environment
+        .clone()
+        .unwrap_or("development".to_string());
 
     let state = AppState {
         config: Arc::new(clean_config),
@@ -135,7 +189,6 @@ async fn main() {
     // verify_config_loading(&state);
 
     let app = Router::new()
-        .nest("/api/v1/auth", auth_routes(&state))
         .nest("/api/v1/user", user_routes(&state))
         .nest("/api/v1/admin", admin_routes(&state))
         .nest("/api/v1/rooms", rooms_routes(&state))
@@ -146,10 +199,36 @@ async fn main() {
 
     // .layer(Extension(db_pool));
 
-    // Server address
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
+    async fn resolve_bind_address(host: &str, port: u16) -> Result<SocketAddr> {
+        let bind_addr = format!("{host}:{port}");
 
-    let slice_db_url = format!("{}...", &database_url[0..25]);
+        let mut resolved_addrs = lookup_host(&bind_addr)
+            .await
+            .with_context(|| format!("Failed to resolve bind address: {bind_addr}"))?;
+
+        let addr = resolved_addrs
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("No socket addresses resolved for {bind_addr}"))?;
+
+        Ok(addr)
+    }
+
+    fn build_database_url(db_host: &str, db_port: u16) -> String {
+        format!("postgres://...@{db_host}:{db_port}/..")
+    }
+
+    let addr = match resolve_bind_address(&host, port).await {
+        Ok(addr) => addr,
+        Err(err) => {
+            error!(
+                "SERVER START-UP ERROR: Failed to resolve bind address ({}:{}): {:?}",
+                host, port, err
+            );
+            std::process::exit(1);
+        }
+    };
+
+    let slice_db_url = build_database_url(&host, db_port);
 
     // Start server
     let listener = match tokio::net::TcpListener::bind(addr).await {
@@ -171,8 +250,7 @@ async fn main() {
         }
         Err(e) => {
             error!("SERVER INITIALIZATION ERROR: {}!", e);
-
-            return;
+            std::process::exit(1);
         }
     };
 

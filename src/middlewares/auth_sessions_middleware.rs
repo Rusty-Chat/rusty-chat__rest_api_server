@@ -22,12 +22,20 @@ pub struct ErrorResponse {
     pub response_message: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum TokenKind {
+    Access,
+    Refresh,
+    OneTimePassword,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct JwtClaims {
     pub id: i64,
     pub email: String,
     pub exp: usize,
     pub iat: usize,
+    pub token_kind: TokenKind,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow, Clone)]
@@ -70,8 +78,22 @@ pub async fn sessions_middleware(
     mut req: Request,
     next: Next,
 ) -> impl IntoResponse {
+    let auth_config = match state.config.auth.as_ref() {
+        Some(config) => config,
+        None => {
+            error!("AUTH CONFIGURATION MISSING!");
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "Server Error".to_string(),
+                    response_message: "Auth configuration is missing".to_string(),
+                }),
+            ));
+        }
+    };
+
     let session_state = MiddlewareState {
-        jwt_secret: std::env::var("JWT_SECRET").expect("JWT_SECRET must be set"),
+        jwt_secret: auth_config.jwt_secret.clone(),
         cookie_name: "rusty_chat_auth_cookie".to_string(),
     };
 
@@ -228,6 +250,18 @@ pub async fn sessions_middleware(
                     Json(ErrorResponse {
                         error: "Unauthorized".to_string(),
                         response_message: "User credentials do not match".to_string(),
+                    }),
+                ));
+            }
+
+            if token_data.claims.token_kind != TokenKind::Refresh {
+                error!("INVALID TOKEN TYPE CLAIM!");
+
+                return Err((
+                    StatusCode::UNAUTHORIZED,
+                    Json(ErrorResponse {
+                        error: "Unauthorized".to_string(),
+                        response_message: "Invalid token type".to_string(),
                     }),
                 ));
             }

@@ -83,7 +83,7 @@ pub async fn sync_messages_status_to_seen(
         r#"
         SELECT * FROM rooms 
         WHERE co_member = $1 OR $1 = ANY(co_members)
-        "#
+        "#,
     )
     .bind(user_id)
     .fetch_all(&state.db)
@@ -107,7 +107,7 @@ pub async fn sync_messages_status_to_seen(
     for room in rooms {
         let room_id = room.id;
 
-        // Step 2: Fetch all the messages in this room (excluding those already 'seen' if we want optimization, 
+        // Step 2: Fetch all the messages in this room (excluding those already 'seen' if we want optimization,
         // but following the original pattern of fetching all and checking)
         let messages_result = sqlx::query_as::<_, Message>(
             r#"
@@ -115,7 +115,7 @@ pub async fn sync_messages_status_to_seen(
             FROM messages 
             WHERE room_id = $1 AND status NOT IN ('seen')
             ORDER BY created_at ASC
-            "#
+            "#,
         )
         .bind(room_id)
         .fetch_all(&state.db)
@@ -157,18 +157,22 @@ pub async fn sync_messages_status_to_seen(
                                     UPDATE messages 
                                     SET status = 'seen' 
                                     WHERE id = $1
-                                    "#
+                                    "#,
                                 )
                                 .bind(message.id)
                                 .execute(&state.db)
                                 .await;
                             }
                         }
-                    },
+                    }
                     true => {
                         // For group rooms, if user is in co_members
-                        if room.co_members.as_ref().map_or(false, |members| members.contains(&user_id)) {
-                             let _ = sqlx::query(
+                        if room
+                            .co_members
+                            .as_ref()
+                            .map_or(false, |members| members.contains(&user_id))
+                        {
+                            let _ = sqlx::query(
                                 r#"
                                 INSERT INTO message_status_receipts (message_id, sender_id, receiver_id, room_id, action, status)
                                 VALUES ($1, $2, $3, $4, 'system', 'seen')
@@ -196,17 +200,19 @@ pub async fn sync_messages_status_to_seen(
                             .await;
 
                             if let Ok(receipts) = receipts_res {
-                                let receipt_receiver_ids: Vec<i64> = receipts.iter().map(|r| r.receiver_id).collect();
-                                
-                                let is_seen_by_all = room.co_members.as_ref().map_or(false, |members| {
-                                    members.iter().all(|member_id| {
-                                        // If this member is the sender, they don't need a seen receipt
-                                        if Some(*member_id) == message.sender_id {
-                                            return true;
-                                        }
-                                        receipt_receiver_ids.contains(member_id)
-                                    })
-                                });
+                                let receipt_receiver_ids: Vec<i64> =
+                                    receipts.iter().map(|r| r.receiver_id).collect();
+
+                                let is_seen_by_all =
+                                    room.co_members.as_ref().map_or(false, |members| {
+                                        members.iter().all(|member_id| {
+                                            // If this member is the sender, they don't need a seen receipt
+                                            if Some(*member_id) == message.sender_id {
+                                                return true;
+                                            }
+                                            receipt_receiver_ids.contains(member_id)
+                                        })
+                                    });
 
                                 println!("is_seen_by_all: {}", is_seen_by_all);
 
@@ -216,7 +222,7 @@ pub async fn sync_messages_status_to_seen(
                                         UPDATE messages 
                                         SET status = 'seen' 
                                         WHERE id = $1
-                                        "#
+                                        "#,
                                     )
                                     .bind(message.id)
                                     .execute(&state.db)

@@ -1,14 +1,14 @@
-use crate::{AppState};
+use crate::AppState;
 use axum::{
     Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
 };
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::error;
-use chrono::NaiveDateTime;
 
 #[derive(Debug, Deserialize)]
 pub struct AddMemberPayload {

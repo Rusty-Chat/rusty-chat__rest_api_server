@@ -1,13 +1,32 @@
 [app]
-environment = "production"
-# log_level = "warn"
+environment = "staging"
 
-# [server]
-# port = 80
+[server]
+host = "localhost"
+port = 8000
 
-# [database]
-# host = "prod-db.internal"
-# max_connections = 100
+[database]
+engine = "postgres"
+host = "localhost"
+port = 5433
+user = "<db-user>" # should be overridden via APP__DATABASE__USER
+password = "<db-password>" # should be overridden via APP__DATABASE__PASSWORD
+name = "<db-name>" # should be overridden via APP__DATABASE__NAME
+max_connections = 20
+connect_timeout_secs = 5
+
+[auth]
+jwt_secret = "<jwt-secret>" # should be overridden via APP__AUTH__JWT_SECRET
+jwt_access_expiration_time_in_hours = 1
+jwt_session_expiration_time_in_hours = 24
+jwt_one_time_password_lifetime_in_minutes = 5
+
+[aws]
+access_key = "<aws-access-key>" # should be overridden via APP__AWS__ACCESS_KEY
+secret_access_key = "<aws-secret-access-key>" # should be overridden via APP__AWS__SECRET_ACCESS_KEY
+bucket_url = "<aws-bucket-url>" # should be overridden via APP__AWS__BUCKET_URL
+s3_bucket_region = "<aws-s3-bucket-region>" # should be overridden via APP__AWS__S3_BUCKET_REGION
+s3_bucket_name = "<aws-s3-bucket-name>" # should be overridden via APP__AWS__S3_BUCKET_NAME
 
 [observability]
 enable_tracing = true

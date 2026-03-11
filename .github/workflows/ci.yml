@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Cargo Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run cargo check
+        run: cargo check --all --all-features
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check Formatting
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Run Clippy
+        # run: cargo clippy --all --all-features -- -D warnings
+        run: cargo clippy # partial disabling(of warnings as errors) - will enable later when repo is more stable
+
+  test:
+    name: TestSuite + Coverage
+    runs-on: ubuntu-latest
+
+    env:
+      APP__ENV: development
+      APP__SERVER__HOST: 127.0.0.1
+      APP__SERVER__PORT: 8000
+      APP__DATABASE__ENGINE: postgres
+      APP__DATABASE__HOST: localhost
+      APP__DATABASE__PORT: 5433
+      APP__DATABASE__USER: ${{ secrets.CI_DB_USER || 'postgres' }}
+      APP__DATABASE__PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'password' }}
+      APP__DATABASE__NAME: ${{ secrets.CI_DB_NAME || 'chat_db_test' }}
+
+      APP__AUTH__JWT_SECRET: ${{ secrets.CI_JWT_SECRET || 'dummy_jwt_secret_for_ci_testing_purposes_only_1234567890' }}
+      APP__AUTH__JWT_ACCESS_EXPIRATION_TIME_IN_HOURS: 1
+      APP__AUTH__JWT_SESSION_EXPIRATION_TIME_IN_HOURS: 24
+      APP__AUTH__JWT_ONE_TIME_PASSWORD_LIFETIME_IN_MINUTES: 5
+
+      DATABASE_URL: postgres://${{ secrets.CI_DB_USER || 'postgres' }}:${{ secrets.CI_DB_PASSWORD || 'password' }}@localhost:5433/${{ secrets.CI_DB_NAME || 'chat_db_test' }}
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: ${{ secrets.CI_DB_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'password' }}
+          POSTGRES_DB: ${{ secrets.CI_DB_NAME || 'chat_db_test' }}
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd="pg_isready"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features postgres
+
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov
+
+      - name: Run Migrations
+        run: sqlx migrate run
+
+      - name: Run Tests with Coverage
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: lcov.info

@@ -32,7 +32,7 @@ pub async fn get_message_edit_history(
     Path(message_id): Path<i64>,
 ) -> impl IntoResponse {
     let edits_res = sqlx::query_as::<_, MessageEdit>(
-        "SELECT * FROM message_edits WHERE message_id = $1 ORDER BY created_at DESC"
+        "SELECT * FROM message_edits WHERE message_id = $1 ORDER BY created_at DESC",
     )
     .bind(message_id)
     .fetch_all(&state.db)

@@ -1,10 +1,10 @@
 use crate::AppState;
 use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 use axum::{
-    extract::{Path, State, Extension},
+    Json,
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::NaiveDateTime;
 use serde::Serialize;
@@ -41,13 +41,12 @@ pub async fn un_archive_message(
     Path((message_id, user_id)): Path<(i64, i64)>,
 ) -> impl IntoResponse {
     // First, un-archive the message
-    let unarchive_res = sqlx::query(
-        "DELETE FROM message_archives WHERE user_id = $1 AND message_id = $2"
-    )
-    .bind(user_id)
-    .bind(message_id)
-    .execute(&state.db)
-    .await;
+    let unarchive_res =
+        sqlx::query("DELETE FROM message_archives WHERE user_id = $1 AND message_id = $2")
+            .bind(user_id)
+            .bind(message_id)
+            .execute(&state.db)
+            .await;
 
     match unarchive_res {
         Ok(_) => {
@@ -73,14 +72,15 @@ pub async fn un_archive_message(
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         Json(ArchiveResponse {
-                            response_message: "Message un-archived but failed to fetch details".to_string(),
+                            response_message: "Message un-archived but failed to fetch details"
+                                .to_string(),
                             response: None,
                             error: Some(e.to_string()),
                         }),
                     )
                 }
             }
-        },
+        }
         Err(e) => {
             error!("FAILED_TO_UN_ARCHIVE_MESSAGE!");
             (

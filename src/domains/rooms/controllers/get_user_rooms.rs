@@ -83,7 +83,6 @@ pub async fn get_user_rooms(
             }),
         );
     }
-    
 
     let result = sqlx::query_as::<_, Room>(
         r#"
@@ -101,7 +100,7 @@ pub async fn get_user_rooms(
         Ok(rooms) => {
             if !rooms.is_empty() {
                 let room_ids: Vec<i64> = rooms.iter().map(|r| r.id).collect();
-                
+
                 // Set all message status receipts of all the messages in those rooms to "seen"
                 let _ = sqlx::query(
                     r#"
@@ -136,7 +135,7 @@ pub async fn get_user_rooms(
                     error: None,
                 }),
             )
-        },
+        }
         Err(e) => {
             error!("FETCH USER ROOMS REQUEST FAILED");
             (

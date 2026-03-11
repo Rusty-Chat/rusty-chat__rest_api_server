@@ -1,10 +1,10 @@
 use crate::AppState;
 use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 use axum::{
-    extract::{Path, State, Extension},
+    Json,
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::NaiveDateTime;
 use serde::Serialize;
@@ -40,13 +40,11 @@ pub async fn un_bookmark_message(
     Extension(session): Extension<SessionsMiddlewareOutput>,
     Path((message_id, user_id)): Path<(i64, i64)>,
 ) -> impl IntoResponse {
-    let res = sqlx::query(
-        "DELETE FROM message_bookmarks WHERE user_id = $1 AND message_id = $2"
-    )
-    .bind(user_id)
-    .bind(message_id)
-    .execute(&state.db)
-    .await;
+    let res = sqlx::query("DELETE FROM message_bookmarks WHERE user_id = $1 AND message_id = $2")
+        .bind(user_id)
+        .bind(message_id)
+        .execute(&state.db)
+        .await;
 
     match res {
         Ok(_) => {
@@ -72,14 +70,15 @@ pub async fn un_bookmark_message(
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         Json(BookmarkResponse {
-                            response_message: "Message un-bookmarked but failed to fetch details".to_string(),
+                            response_message: "Message un-bookmarked but failed to fetch details"
+                                .to_string(),
                             response: None,
                             error: Some(e.to_string()),
                         }),
                     )
                 }
             }
-        },
+        }
         Err(e) => {
             error!("FAILED_TO_UN_BOOKMARK_MESSAGE_");
             (

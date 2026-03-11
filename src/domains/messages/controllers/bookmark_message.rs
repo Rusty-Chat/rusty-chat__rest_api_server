@@ -1,10 +1,10 @@
 use crate::AppState;
 use crate::middlewares::auth_sessions_middleware::SessionsMiddlewareOutput;
 use axum::{
-    extract::{Path, State, Extension},
+    Json,
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::NaiveDateTime;
 use serde::Serialize;
@@ -72,14 +72,15 @@ pub async fn bookmark_message(
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         Json(BookmarkResponse {
-                            response_message: "Message bookmarked but failed to fetch details".to_string(),
+                            response_message: "Message bookmarked but failed to fetch details"
+                                .to_string(),
                             response: None,
                             error: Some(e.to_string()),
                         }),
                     )
                 }
             }
-        },
+        }
         Err(e) => {
             error!("FAILED_TO_BOOKMARK_MESSAGE_");
             (

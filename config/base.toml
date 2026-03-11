@@ -1,5 +1,5 @@
 [app]
-name = "rusty-chat-rest-api-server"
+name = "chat__core_rest_api_server"
 # environment = "development"
 # log_level = "info"
 
