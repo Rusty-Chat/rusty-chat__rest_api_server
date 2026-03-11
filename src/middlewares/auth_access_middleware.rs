@@ -16,12 +16,20 @@ use tracing::error;
 // Types/Structures
 // ============================================================================
 
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum TokenKind {
+    Access,
+    Refresh,
+    OneTimePassword,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JwtClaims {
     pub id: i64,
     pub email: String,
     pub exp: usize,
     pub iat: usize,
+    pub token_kind: TokenKind,
 }
 
 #[derive(Clone)]
@@ -81,6 +89,11 @@ fn verify_access_token(token: &str, secret: &str, user: &UserProfile) -> TokenSt
             if token_data.claims.email != user.email {
                 return TokenStatus::Invalid("User credentials do not match".to_string());
             }
+
+            if token_data.claims.token_kind != TokenKind::Access {
+                return TokenStatus::Invalid("Invalid token type".to_string());
+            }
+
             TokenStatus::Valid
         }
         Err(err) => {

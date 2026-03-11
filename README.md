@@ -103,7 +103,7 @@ To start the server in development mode(auto-reload enabled), simply run:
 cargo dev
 ```
 
-> `cargo-watch` handles the server/project reloads on-save. See `.config/config.toml` for reference on the `dev` command.
+> `cargo-watch` handles the server/project reloads on-save. See `.cargo/config.toml` for reference on the `dev` command.
 
 *Note: The `dev` command is an alias for `cargo watch`. If you are on WSL and reload doesn't trigger, proceed to use the polling command option(also see `.cargo/config.toml` for reference on that).*
 

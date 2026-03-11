@@ -250,7 +250,22 @@ pub async fn update_user(
             }
         };
 
-        deploy_auth_cookie(cookies, tokens.auth_cookie.unwrap(), state.config.as_ref()).await;
+        let auth_cookie = match tokens.auth_cookie {
+            Some(cookie) => cookie,
+            None => {
+                error!("AUTH COOKIE GENERATION FAILED!");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(UpdateResponse {
+                        response_message: "Failed to generate auth cookie".to_string(),
+                        response: None,
+                        error: Some("Auth cookie generation error".to_string()),
+                    }),
+                );
+            }
+        };
+
+        deploy_auth_cookie(cookies, auth_cookie, state.config.as_ref()).await;
 
         query_builder = query_builder.bind(email);
 

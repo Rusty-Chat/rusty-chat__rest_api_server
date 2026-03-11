@@ -191,7 +191,11 @@ pub async fn sync_room_messages_status_to_delivered(
                         }
                         true => {
                             // similarly, create a delivery status receipt for this user
-                            if room.co_members.clone().unwrap().contains(&user_id) {
+                            if room
+                                .co_members
+                                .as_ref()
+                                .map_or(false, |members| members.contains(&user_id))
+                            {
                                 receipt_res = sqlx::query(
                                     r#"
                                     INSERT INTO message_status_receipts (message_id, sender_id, receiver_id, room_id, action, status)

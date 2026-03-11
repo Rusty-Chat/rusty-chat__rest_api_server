@@ -25,6 +25,13 @@ pub enum JwtError {
     ExpirationCalculation(String),
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
+pub enum TokenKind {
+    Access,
+    Refresh,
+    OneTimePassword,
+}
+
 /// JWT Claims structure.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -36,6 +43,8 @@ pub struct Claims {
     pub exp: usize,
     /// Issued-at timestamp (milliseconds since epoch).
     pub iat: usize,
+    /// Token discriminator.
+    pub token_kind: TokenKind,
 }
 
 /// Simplified User structure for token generation.
@@ -86,7 +95,8 @@ pub async fn generate_tokens(
                 id: user.id,
                 email: user.email.clone(),
                 exp: access_token_expiration,
-                iat: Utc::now().timestamp_millis() as usize,
+                iat: now.timestamp() as usize,
+                token_kind: TokenKind::Access,
             };
 
             let access_token = encode(
@@ -99,7 +109,8 @@ pub async fn generate_tokens(
                 id: user.id,
                 email: user.email.clone(),
                 exp: refresh_token_expiration,
-                iat: Utc::now().timestamp_millis() as usize,
+                iat: now.timestamp() as usize,
+                token_kind: TokenKind::Refresh,
             };
 
             let refresh_token = encode(
@@ -134,7 +145,8 @@ pub async fn generate_tokens(
                 id: user.id,
                 email: user.email.clone(),
                 exp: otp_token_expiration,
-                iat: Utc::now().timestamp_millis() as usize,
+                iat: now.timestamp() as usize,
+                token_kind: TokenKind::OneTimePassword,
             };
 
             let otp_token = encode(

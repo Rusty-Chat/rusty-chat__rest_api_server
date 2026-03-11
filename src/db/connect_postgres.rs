@@ -3,6 +3,7 @@
 //! This module provides functionality for establishing and managing
 //! the connection pool to the PostgreSQL database.
 
+use anyhow::{Context, Result};
 use sqlx::postgres::PgPoolOptions;
 use std::time::Duration;
 
@@ -13,13 +14,13 @@ use std::time::Duration;
 /// - `max_connections`: Maximum number of concurrent connections in the pool.
 /// - `acquire_timeout_secs`: Timeout in seconds for acquiring a connection from the pool.
 ///
-/// # Panics
-/// Panics if the connection fails, providing a detailed troubleshooting guide.
+/// # Errors
+/// Returns an error if the connection fails, providing a detailed troubleshooting guide.
 pub async fn connect_pg(
     database_url: String,
     max_connections: u32,
     acquire_timeout_secs: u64,
-) -> sqlx::PgPool {
+) -> Result<sqlx::PgPool> {
     let pool = PgPoolOptions::new()
         .max_connections(max_connections)
         .acquire_timeout(Duration::from_secs(acquire_timeout_secs))
@@ -27,7 +28,7 @@ pub async fn connect_pg(
         .await;
 
     match pool {
-        Ok(p) => p,
+        Ok(p) => Ok(p),
         Err(e) => {
             let redacted_url = match url::Url::parse(&database_url) {
                 Ok(mut u) => {
@@ -38,7 +39,7 @@ pub async fn connect_pg(
                 Err(_) => "INVALID_DB_URL".to_string(),
             };
 
-            println!(
+            Err(anyhow::anyhow!(
                 "
                 CRITICAL DATABASE CONNECTION ERROR:
                 -------------------------------------------------
@@ -52,10 +53,10 @@ pub async fn connect_pg(
                 4. Is the network allowing connection to the configured port?
                 -------------------------------------------------
                 ",
-                e, redacted_url
-            );
-
-            panic!("DATABASE CONNECTION FAILED: {}", e);
+                e,
+                redacted_url
+            ))
+            .context("DATABASE CONNECTION FAILED")
         }
     }
 }

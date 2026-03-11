@@ -22,12 +22,20 @@ pub struct ErrorResponse {
     pub response_message: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum TokenKind {
+    Access,
+    Refresh,
+    OneTimePassword,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct JwtClaims {
     pub id: i64,
     pub email: String,
     pub exp: usize,
     pub iat: usize,
+    pub token_kind: TokenKind,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow, Clone)]
@@ -242,6 +250,18 @@ pub async fn sessions_middleware(
                     Json(ErrorResponse {
                         error: "Unauthorized".to_string(),
                         response_message: "User credentials do not match".to_string(),
+                    }),
+                ));
+            }
+
+            if token_data.claims.token_kind != TokenKind::Refresh {
+                error!("INVALID TOKEN TYPE CLAIM!");
+
+                return Err((
+                    StatusCode::UNAUTHORIZED,
+                    Json(ErrorResponse {
+                        error: "Unauthorized".to_string(),
+                        response_message: "Invalid token type".to_string(),
                     }),
                 ));
             }

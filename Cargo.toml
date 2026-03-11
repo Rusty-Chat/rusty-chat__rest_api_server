@@ -30,3 +30,4 @@ config = "0.15.19"
 uuid = { version = "1.15.1", features = ["v4"] }
 thiserror = "2.0.17"
 url = "2.5.7"
+percent-encoding = "2.3"

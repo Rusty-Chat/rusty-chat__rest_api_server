@@ -54,30 +54,24 @@ jobs:
       APP__DATABASE__ENGINE: postgres
       APP__DATABASE__HOST: localhost
       APP__DATABASE__PORT: 5433
-      APP__DATABASE__USER: ${{ secrets.CI_DB_USER }}
-      APP__DATABASE__PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
-      APP__DATABASE__NAME: ${{ secrets.CI_DB_NAME }}
+      APP__DATABASE__USER: ${{ secrets.CI_DB_USER || 'postgres' }}
+      APP__DATABASE__PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'password' }}
+      APP__DATABASE__NAME: ${{ secrets.CI_DB_NAME || 'chat_db_test' }}
 
-      APP__AUTH__JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
+      APP__AUTH__JWT_SECRET: ${{ secrets.CI_JWT_SECRET || 'dummy_jwt_secret_for_ci_testing_purposes_only_1234567890' }}
       APP__AUTH__JWT_ACCESS_EXPIRATION_TIME_IN_HOURS: 1
       APP__AUTH__JWT_SESSION_EXPIRATION_TIME_IN_HOURS: 24
       APP__AUTH__JWT_ONE_TIME_PASSWORD_LIFETIME_IN_MINUTES: 5
 
-      APP__AWS__ACCESS_KEY: ${{ secrets.CI_AWS_ACCESS_KEY }}
-      APP__AWS__SECRET_ACCESS_KEY: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
-      APP__AWS__BUCKET_URL: ${{ secrets.CI_AWS_BUCKET_URL }}
-      APP__AWS__S3_BUCKET_REGION: ${{ secrets.CI_AWS_S3_BUCKET_REGION }}
-      APP__AWS__S3_BUCKET_NAME: ${{ secrets.CI_AWS_S3_BUCKET_NAME }}
-
-      DATABASE_URL: postgres://${{ secrets.CI_DB_USER }}:${{ secrets.CI_DB_PASSWORD }}@localhost:5433/${{ secrets.CI_DB_NAME }}
+      DATABASE_URL: postgres://${{ secrets.CI_DB_USER || 'postgres' }}:${{ secrets.CI_DB_PASSWORD || 'password' }}@localhost:5433/${{ secrets.CI_DB_NAME || 'chat_db_test' }}
 
     services:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: ${{ secrets.CI_DB_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.CI_DB_NAME }}
+          POSTGRES_USER: ${{ secrets.CI_DB_USER || 'postgres' }}
+          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'password' }}
+          POSTGRES_DB: ${{ secrets.CI_DB_NAME || 'chat_db_test' }}
         ports:
           - 5433:5432
         options: >-

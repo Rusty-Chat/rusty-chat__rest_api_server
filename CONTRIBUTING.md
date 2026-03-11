@@ -1,4 +1,4 @@
-# Contributing to Krabby Chat Auth Server
+# Contributing to Krabby Core Rest API Server
 
 First off, thank you for considering contributing to Krabby! It's people like you that make the open-source community such an amazing place to learn, inspire, and create.
 

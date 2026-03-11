@@ -107,16 +107,21 @@ pub struct AppConfig {
 /// 3. `config/{APP__ENV}.toml` - overrides `config/base.toml`
 /// 4. `config/base.toml` - default values
 pub fn load_config() -> Result<AppConfig> {
-    // Determine environment
-    let env = std::env::var("APP__ENV")
-        .context("APP__ENV environment variable is not set! Please set it to 'development', 'production', etc.")?;
+    // Determine environment (optional)
+    let env = std::env::var("APP__ENV").ok();
 
     // Build configuration
-    let builder = Config::builder()
+    let mut builder = Config::builder()
         // Base config is required
-        .add_source(File::with_name("config/base").required(true))
-        // Environment-specific overrides (optional)
-        .add_source(File::with_name(&format!("config/{}", env)).required(false))
+        .add_source(File::with_name("config/base").required(true));
+
+    // Environment-specific overrides (optional)
+    if let Some(env_name) = env {
+        builder =
+            builder.add_source(File::with_name(&format!("config/{}", env_name)).required(false));
+    }
+
+    builder = builder
         // Local overrides (optional, for dev machines)
         .add_source(File::with_name("config/local").required(false))
         // Environment variable overrides
@@ -177,6 +182,7 @@ pub enum ConfigError {
     MissingAwsBucketUrl,
     MissingAwsS3BucketRegion,
     MissingAwsS3BucketName,
+    InvalidAuthLifetime(String),
 }
 
 impl fmt::Display for ConfigError {
@@ -202,6 +208,9 @@ impl fmt::Display for ConfigError {
             }
             ConfigError::MissingAwsS3BucketName => {
                 write!(f, "aws.s3_bucket_name cannot be empty")
+            }
+            ConfigError::InvalidAuthLifetime(field) => {
+                write!(f, "auth.{} must be greater than 0", field)
             }
         }
     }
@@ -254,6 +263,21 @@ impl AppConfig {
         let auth = self.auth.as_ref().ok_or(ConfigError::MissingAuthSection)?;
         if auth.jwt_secret.trim().is_empty() {
             return Err(ConfigError::MissingJwtSecret);
+        }
+        if auth.jwt_access_expiration_time_in_hours == 0 {
+            return Err(ConfigError::InvalidAuthLifetime(
+                "jwt_access_expiration_time_in_hours".to_string(),
+            ));
+        }
+        if auth.jwt_session_expiration_time_in_hours == 0 {
+            return Err(ConfigError::InvalidAuthLifetime(
+                "jwt_session_expiration_time_in_hours".to_string(),
+            ));
+        }
+        if auth.jwt_one_time_password_lifetime_in_minutes == 0 {
+            return Err(ConfigError::InvalidAuthLifetime(
+                "jwt_one_time_password_lifetime_in_minutes".to_string(),
+            ));
         }
 
         // Check AWS

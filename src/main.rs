@@ -1,6 +1,9 @@
+use anyhow::{Context, Result};
 use axum::{Router, middleware};
 use sqlx::PgPool;
+use std::net::SocketAddr;
 use std::sync::Arc;
+use tokio::net::lookup_host;
 
 // AWS S3
 use crate::utils::file_upload_handler::S3AppState;
@@ -9,6 +12,7 @@ use aws_credential_types::Credentials;
 use aws_sdk_s3::Client;
 
 // logging init with the tracing crate
+use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use tracing::error;
 use tracing::info;
 use tracing_subscriber::fmt::time::SystemTime;
@@ -127,19 +131,29 @@ async fn main() {
         }
     };
 
+    let encoded_user = utf8_percent_encode(db_user, NON_ALPHANUMERIC).to_string();
+    let encoded_password = utf8_percent_encode(db_password, NON_ALPHANUMERIC).to_string();
+
     let database_url = format!(
         "postgres://{}:{}@{}:{}/{}",
-        db_user, db_password, db_config.host, db_config.port, db_config.name
+        encoded_user, encoded_password, db_config.host, db_config.port, db_config.name
     );
     let db_host = db_config.host.clone();
     let db_port = db_config.port;
 
-    let db_pool = connect_pg(
+    let db_pool = match connect_pg(
         database_url.clone(),
         db_config.max_connections,
         db_config.connect_timeout_secs,
     )
-    .await;
+    .await
+    {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("SERVER START-UP ERROR: DATABASE CONNECTION FAILED: {}!", e);
+            std::process::exit(1);
+        }
+    };
 
     let server_config = match clean_config.server.as_ref() {
         Some(config) => config,
@@ -185,12 +199,39 @@ async fn main() {
 
     // .layer(Extension(db_pool));
 
-    let bind_addr = format!("{}:{}", host, port);
+    async fn resolve_bind_address(host: &str, port: u16) -> Result<SocketAddr> {
+        let bind_addr = format!("{host}:{port}");
 
-    let slice_db_url = format!("postgres://...@{}:{}/..", db_host, db_port);
+        let mut resolved_addrs = lookup_host(&bind_addr)
+            .await
+            .with_context(|| format!("Failed to resolve bind address: {bind_addr}"))?;
+
+        let addr = resolved_addrs
+            .next()
+            .ok_or_else(|| anyhow::anyhow!("No socket addresses resolved for {bind_addr}"))?;
+
+        Ok(addr)
+    }
+
+    fn build_database_url(db_host: &str, db_port: u16) -> String {
+        format!("postgres://...@{db_host}:{db_port}/..")
+    }
+
+    let addr = match resolve_bind_address(&host, port).await {
+        Ok(addr) => addr,
+        Err(err) => {
+            error!(
+                "SERVER START-UP ERROR: Failed to resolve bind address ({}:{}): {:?}",
+                host, port, err
+            );
+            std::process::exit(1);
+        }
+    };
+
+    let slice_db_url = build_database_url(&host, db_port);
 
     // Start server
-    let listener = match tokio::net::TcpListener::bind(&bind_addr).await {
+    let listener = match tokio::net::TcpListener::bind(addr).await {
         Ok(listener) => {
             print!(
                 "
@@ -202,7 +243,7 @@ async fn main() {
 
                 Server running on http://{}
                 ",
-                slice_db_url, environment, bind_addr
+                slice_db_url, environment, addr
             );
 
             listener
